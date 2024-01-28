@@ -1,0 +1,123 @@
+import tensorflow as tf
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Dense, GlobalAveragePooling2D, Flatten, Dropout
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.callbacks import ReduceLROnPlateau
+from sklearn.metrics import confusion_matrix
+import matplotlib.pyplot as plt
+import numpy as np
+import itertools
+
+# Paths to your datasets
+dataset_dir = r'/home/rcui/project/Intel_Image/Images/seg_train/seg_train'
+test_dir = r'/home/rcui/project/Intel_Image/Images/seg_test/seg_test'
+
+
+# Parameters
+img_height, img_width = 224, 224
+batch_size = 32
+
+# Load and preprocess the data (without data augmentation)
+train_datagen = ImageDataGenerator(rescale=1./255, validation_split=0.2)
+
+# Generator for Training Data
+train_generator = train_datagen.flow_from_directory(
+    dataset_dir,
+    target_size=(img_height, img_width),
+    batch_size=batch_size,
+    class_mode='categorical',
+    subset='training')  # Use the training subset
+
+# Generator for Validation Data
+validation_generator = train_datagen.flow_from_directory(
+    dataset_dir,
+    target_size=(img_height, img_width),
+    batch_size=batch_size,
+    class_mode='categorical',
+    subset='validation')  # Use the validation subset
+
+
+# Load the pretrained model (VGG16)
+base_model = tf.keras.applications.VGG16(weights='imagenet', include_top=False, input_shape=(img_height, img_width, 3))
+
+# Freeze all the layers of the base model
+for layer in base_model.layers:
+    layer.trainable = False
+
+# Add custom layers with Dropout
+x = base_model.output
+x = GlobalAveragePooling2D()(x)
+x = Flatten()(x)
+x = Dense(1024, activation='relu')(x)
+x = Dropout(0.5)(x)  # Adding dropout layer
+x = Dense(512, activation='relu')(x)
+x = Dropout(0.5)(x)  # Adding another dropout layer
+predictions = Dense(6, activation='softmax')(x)
+
+model = Model(inputs=base_model.input, outputs=predictions)
+
+# Compile the model
+model.compile(optimizer=Adam(learning_rate=0.001), loss='categorical_crossentropy', metrics=['accuracy'])
+
+# Callback for reducing the learning rate
+reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=5, min_lr=0.00001, verbose=1)
+
+# Initial Training
+model.fit(
+    train_generator,
+    steps_per_epoch=train_generator.samples // train_generator.batch_size,
+    validation_data=validation_generator,
+    validation_steps=validation_generator.samples // validation_generator.batch_size,
+    epochs=10,
+    callbacks=[reduce_lr])
+
+# Fine-Tuning: Unfreeze more layers of the base model
+for layer in base_model.layers[-5:]:
+    layer.trainable = True
+
+# Recompile the model with a lower learning rate
+model.compile(optimizer=Adam(learning_rate=0.0001), loss='categorical_crossentropy', metrics=['accuracy'])
+
+# Continue Training with learning rate reduction
+model.fit(
+    train_generator,
+    steps_per_epoch=train_generator.samples // train_generator.batch_size,
+    validation_data=validation_generator,
+    validation_steps=validation_generator.samples // validation_generator.batch_size,
+    epochs=5,
+    callbacks=[reduce_lr])
+
+# Load and prepare the test data
+test_datagen = ImageDataGenerator(rescale=1./255)
+test_generator = test_datagen.flow_from_directory(
+    test_dir,
+    target_size=(img_height, img_width),
+    batch_size=batch_size,
+    class_mode='categorical',
+    shuffle=False)
+
+# Evaluate the model on the test set
+test_loss, test_accuracy = model.evaluate(
+    test_generator, 
+    steps=test_generator.samples // test_generator.batch_size + 1
+)
+
+print(f"Test Loss: {test_loss}")
+print(f"Test Accuracy: {test_accuracy}")
+
+# Predict and compute confusion matrix
+predictions = model.predict(test_generator, steps=test_generator.samples // test_generator.batch_size + 1)
+predicted_classes = np.argmax(predictions, axis=1)
+true_classes = test_generator.classes
+class_labels = list(test_generator.class_indices
+)
+cm = confusion_matrix(true_classes, predicted_classes)
+
+# Plotting Confusion Matrix
+plt.figure(figsize=(10, 10))
+sns.heatmap(cm, annot=True, fmt='g', xticklabels=class_labels, yticklabels=class_labels, cmap='Blues')
+plt.xlabel('Predicted')
+plt.ylabel('True')
+plt.title('Confusion Matrix')
+plt.show()
