@@ -1,0 +1,123 @@
+import pandas as pd
+import numpy as np
+from sklearn.svm import SVC
+from sklearn.ensemble import AdaBoostClassifier
+from sklearn.metrics import roc_curve, auc
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import cross_val_predict
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import StandardScaler
+
+
+
+df = pd.read_csv('/kaggle/input/stroke-prediction-dataset/healthcare-dataset-stroke-data.csv', na_values=['N/A'])
+df = df.dropna()
+
+
+x = df.iloc[:, 1:11]
+y = df.iloc[:, 11]
+
+
+
+assert len(x) == len(y)
+
+
+scaler = StandardScaler()
+x[['age','avg_glucose_level','bmi']] = scaler.fit_transform(x[['age','avg_glucose_level','bmi']])
+
+cat_cols = ['gender' , 'heart_disease' , 'hypertension' , 'ever_married' , 'work_type' , 'Residence_type' , 'smoking_status']
+
+encoder = OneHotEncoder(drop='first', sparse_output=False)
+encoded_features = encoder.fit_transform(x[cat_cols])
+encoded_df = pd.DataFrame(encoded_features, columns=encoder.get_feature_names_out(cat_cols), index=x.index)
+x = x.drop(cat_cols, axis=1)
+x = pd.concat([x, encoded_df], axis=1)
+
+#------------------------------------------------------------------------------
+
+RF_model = RandomForestClassifier(n_estimators=50,random_state=42)
+
+RF_scores = cross_val_score(RF_model, x, y, cv=10, scoring='roc_auc')
+predicted_probabilities = cross_val_predict(RF_model, x, y, cv=10, method='predict_proba')
+RF_mean = np.mean(RF_scores)
+RF_std = np.std(RF_scores)
+RFy_scores = predicted_probabilities[:, 1]
+print(f'AUROC for RandomForest: {RF_mean}')
+
+#------------------------------------------------------------------------------
+
+DT_model = DecisionTreeClassifier(random_state=42)
+
+DT_scores = cross_val_score(DT_model, x, y, cv=10, scoring='roc_auc')
+predicted_probabilities = cross_val_predict(DT_model, x, y, cv=10, method='predict_proba')
+DT_mean = np.mean(DT_scores)
+DT_std = np.std(DT_scores)
+DTy_scores = predicted_probabilities[:, 1]
+print(f'AUROC for DecisionTree: {DT_mean}')
+
+#------------------------------------------------------------------------------
+
+LR_model = LogisticRegression(max_iter=1000)
+
+LR_scores = cross_val_score(LR_model, x, y, cv=10, scoring='roc_auc')
+predicted_probabilities = cross_val_predict(LR_model, x, y, cv=10, method='predict_proba')
+LR_mean = np.mean(LR_scores)
+LR_std = np.std(LR_scores)
+LRy_scores = predicted_probabilities[:, 1]
+print(f'AUROC for LogisticRegression: {LR_mean}')
+
+#------------------------------------------------------------------------------
+
+weak_classifier = DecisionTreeClassifier(max_depth=1)
+
+# Initialize the AdaBoost classifier
+ada_clf = AdaBoostClassifier(estimator=weak_classifier, n_estimators=50, learning_rate=1.0, algorithm='SAMME.R', random_state=42)
+
+AB_scores = cross_val_score(ada_clf, x, y, cv=10, scoring='roc_auc')
+predicted_probabilities = cross_val_predict(ada_clf, x, y, cv=10, method='predict_proba')
+AB_mean = np.mean(AB_scores)
+AB_std = np.std(AB_scores)
+ABy_scores = predicted_probabilities[:, 1]
+print(f'AUROC for Ada Boost: {AB_mean}')
+
+#------------------------------------------------------------------------------
+
+svc = SVC(kernel='poly', degree=3, coef0=1, probability = True)
+svc_scores = cross_val_score(svc, x, y, cv=10, scoring='roc_auc')
+predicted_probabilities = cross_val_predict(svc, x, y, cv=10, method='predict_proba')
+svc_mean = np.mean(svc_scores)
+svc_std = np.std(svc_scores)
+svcy_scores = predicted_probabilities[:, 1]
+print(f'AUROC for SVC_MEAN: {svc_mean}')
+
+
+LR_fpr, LR_tpr, LR_thresholds = roc_curve(y,LRy_scores)
+DT_fpr, DT_tpr, DT_thresholds = roc_curve(y,DTy_scores)
+RF_fpr, RF_tpr, RF_thresholds = roc_curve(y,RFy_scores)
+AB_fpr, AB_tpr, AB_thresholds = roc_curve(y,ABy_scores)
+svc_fpr, svc_tpr, svc_thresholds = roc_curve(y,svcy_scores)
+LRroc_auc = auc(LR_fpr, LR_tpr)
+DTroc_auc = auc(DT_fpr, DT_tpr)
+RFroc_auc = auc(RF_fpr, RF_tpr)
+ABroc_auc = auc(AB_fpr, AB_tpr)
+svcroc_auc = auc(svc_fpr, svc_tpr)
+plt.figure(figsize=(10, 8))
+plt.plot(LR_fpr, LR_tpr, lw=1, alpha=0.8, label=f'LR_ROC (AUC = {LRroc_auc:.2f})')
+plt.plot(DT_fpr, DT_tpr, lw=1, alpha=0.8, label=f'DT_ROC (AUC = {DTroc_auc:.2f})')
+plt.plot(RF_fpr, RF_tpr, lw=1, alpha=0.8, label=f'RF_ROC (AUC = {RFroc_auc:.2f})')
+plt.plot(AB_fpr, AB_tpr, lw=1, alpha=0.8, label=f'AB_ROC (AUC = {ABroc_auc:.2f})')
+plt.plot(svc_fpr, svc_tpr, lw=1, alpha=0.8, label=f'SVM_ROC (AUC = {svcroc_auc:.2f})')
+plt.plot([0, 1], [0, 1], linestyle='--', lw=2, color='r', label='Random', alpha=.8)
+plt.xlim([-0.05, 1.05])
+plt.ylim([-0.05, 1.05])
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.title('Receiver Operating Characteristic')
+plt.legend(loc="lower right")
+plt.show()
