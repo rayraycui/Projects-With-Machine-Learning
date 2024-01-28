@@ -1,0 +1,83 @@
+import pandas as pd
+import numpy as np
+from sklearn.metrics import roc_curve, auc
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import cross_val_predict
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import StandardScaler
+
+df = pd.read_csv('/kaggle/input/heart-failure-prediction/heart.csv')
+
+x = df.iloc[:, :11]
+y = df.iloc[:, 11]
+
+scaler = StandardScaler()
+x[['Age', 'RestingBP' , 'FastingBS' , 'MaxHR' , 'Oldpeak']] = scaler.fit_transform(x[['Age', 'RestingBP' , 'FastingBS' , 'MaxHR' , 'Oldpeak']])
+
+cat_cols = ['Sex' , 'ChestPainType' , 'RestingECG' , 'ExerciseAngina' , 'ST_Slope']
+
+encoder = OneHotEncoder(drop='first', sparse=False)
+encoded_features = encoder.fit_transform(x[cat_cols])
+encoded_df = pd.DataFrame(encoded_features, columns=encoder.get_feature_names_out(cat_cols))
+x = x.drop(cat_cols, axis=1)
+x = pd.concat([x, encoded_df], axis=1)
+
+#------------------------------------------------------------------------------
+
+RF_model = RandomForestClassifier(random_state=42)
+
+RF_scores = cross_val_score(RF_model, x, y, cv=10, scoring='roc_auc')
+predicted_probabilities = cross_val_predict(RF_model, x, y, cv=10, method='predict_proba')
+RF_mean = np.mean(RF_scores)
+RF_std = np.std(RF_scores)
+RFy_scores = predicted_probabilities[:, 1]
+print(f'AUROC for RandomForest: {RF_mean}')
+
+#------------------------------------------------------------------------------
+
+DT_model = DecisionTreeClassifier(random_state=42)
+
+DT_scores = cross_val_score(DT_model, x, y, cv=10, scoring='roc_auc')
+predicted_probabilities = cross_val_predict(DT_model, x, y, cv=10, method='predict_proba')
+DT_mean = np.mean(DT_scores)
+DT_std = np.std(DT_scores)
+DTy_scores = predicted_probabilities[:, 1]
+print(f'AUROC for DecisionTree: {DT_mean}')
+
+#------------------------------------------------------------------------------
+
+LR_model = LogisticRegression(max_iter=1000)
+
+LR_scores = cross_val_score(LR_model, x, y, cv=10, scoring='roc_auc')
+predicted_probabilities = cross_val_predict(LR_model, x, y, cv=10, method='predict_proba')
+LR_mean = np.mean(LR_scores)
+LR_std = np.std(LR_scores)
+LRy_scores = predicted_probabilities[:, 1]
+print(f'AUROC for LogisticRegression: {LR_mean}')
+
+#------------------------------------------------------------------------------
+
+LR_fpr, LR_tpr, LR_thresholds = roc_curve(y,LRy_scores)
+DT_fpr, DT_tpr, DT_thresholds = roc_curve(y,DTy_scores)
+RF_fpr, RF_tpr, RF_thresholds = roc_curve(y,RFy_scores)
+LRroc_auc = auc(LR_fpr, LR_tpr)
+DTroc_auc = auc(DT_fpr, DT_tpr)
+RFroc_auc = auc(RF_fpr, RF_tpr)
+plt.figure(figsize=(10, 8))
+plt.plot(LR_fpr, LR_tpr, lw=1, alpha=0.8, label=f'LR_ROC (AUC = {LRroc_auc:.2f})')
+plt.plot(DT_fpr, DT_tpr, lw=1, alpha=0.8, label=f'DT_ROC (AUC = {DTroc_auc:.2f})')
+plt.plot(RF_fpr, RF_tpr, lw=1, alpha=0.8, label=f'RF_ROC (AUC = {RFroc_auc:.2f})')
+plt.plot([0, 1], [0, 1], linestyle='--', lw=2, color='r', label='Random', alpha=.8)
+plt.xlim([-0.05, 1.05])
+plt.ylim([-0.05, 1.05])
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.title('Receiver Operating Characteristic')
+plt.legend(loc="lower right")
+plt.show()
