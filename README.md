@@ -22,7 +22,7 @@ I predict using 10 different features:
 
 
 
-## A comparison of performance between different machine learning models: TabPFN, Random Forest, Decision Tree, Support Vector Machine, AdaBoost, Logistic Regression.
+## Performance Comparison Between Machine Learning Models: TabPFN, Random Forest, Decision Tree, Support Vector Machine, AdaBoost, and Logistic Regression.
 
 
 ### pr_auc and auc_roc for TabPFN:
