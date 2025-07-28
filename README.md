@@ -5,7 +5,18 @@ STROKE PREDICTOR
 Dataset: https://www.kaggle.com/datasets/fedesoriano/stroke-prediction-dataset/data
 Compiler: fedesoriano 
 
-I predict using 10 different features: Gender, Age, Hypertension, Heart Disease, Marital Status, Work Type, Residence, Average Glucose Level, BMI, Smoking Status
+I predict using 10 different features:
+1) gender: "Male", "Female" or "Other"
+2) age: age of the patient
+3) hypertension: 0 if the patient doesn't have hypertension, 1 if the patient has hypertension
+4) heart_disease: 0 if the patient doesn't have any heart diseases, 1 if the patient has a heart disease
+5) ever_married: "No" or "Yes"
+6) work_type: "children", "Govt_jov", "Never_worked", "Private" or "Self-employed"
+7) Residence_type: "Rural" or "Urban"
+8) avg_glucose_level: average glucose level in blood
+9) bmi: body mass index
+10) smoking_status: "formerly smoked", "never smoked", "smokes" or "Unknown"*
+
 <img width="1394" height="36" alt="image" src="https://github.com/user-attachments/assets/64c0b7e5-bb2b-4b4a-9235-134dcb7ff416" />
 
 
