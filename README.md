@@ -1,6 +1,6 @@
 This repository contains a few small machine learning projects that I completed
 
-# STROKE PREDICTOR
+# STROKE PREDICTION USING MACHINE LEARNING MODELS
 
 Dataset: https://www.kaggle.com/datasets/fedesoriano/stroke-prediction-dataset/data
 Compiler: fedesoriano 
@@ -22,7 +22,7 @@ I predict using 10 different features:
 
 
 
-## A comparison of performance between the stroke predictor usingTabPFN and the stroke predictor using other algorithms such as RandomForest, ADAboost, SVC, Decision Tree, and Logistic Regression
+## A comparison of performance between different machine learning models: TabPFN, Random Forest, Decision Tree, Support Vector Machine, AdaBoost, Logistic Regression.
 
 
 ### pr_auc and auc_roc for TabPFN:
