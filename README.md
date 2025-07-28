@@ -20,6 +20,8 @@ I predict using 10 different features:
 <img width="1394" height="36" alt="image" src="https://github.com/user-attachments/assets/64c0b7e5-bb2b-4b4a-9235-134dcb7ff416" />
 
 
+
+
 A comparison of performance between the stroke predictor usingTabpfn and the stroke predictor using other algorithms such as RandomForest, ADAboost, SVC, Decision Tree, and Logistic Regression
 
 
