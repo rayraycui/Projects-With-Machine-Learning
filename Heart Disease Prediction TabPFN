@@ -1,1 +1,80 @@
+import numpy as np
+import pandas as pd
+import torch
+import os
+os.environ["TABPFN_ALLOW_CPU_LARGE_DATASET"] = "1"
+from sklearn.metrics import precision_recall_curve, average_precision_score, auc
+from imblearn.over_sampling import SMOTE
+from sklearn.metrics import precision_recall_fscore_support
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
+from sklearn.metrics import accuracy_score, classification_report, roc_auc_score
 
+from tabpfn import TabPFNClassifier
+
+df = pd.read_csv("/home/rcui/project/TabPFN/heart.csv")
+
+target_col = "HeartDisease"
+y = df[target_col].astype(int)
+X = df.drop(columns=[target_col])
+
+numeric_cols = ["Age", "RestingBP", "Cholesterol", "MaxHR", "Oldpeak"]
+binary_int_cols = ["FastingBS"]  
+cat_cols = ["Sex", "ChestPainType", "RestingECG", "ExerciseAngina", "ST_Slope"]
+
+numeric_transformer = Pipeline(steps=[
+    ("imputer", SimpleImputer(strategy="median")),
+    ("scaler", StandardScaler()),
+])
+
+binary_transformer = "passthrough"  
+
+categorical_transformer = Pipeline(steps=[
+    ("imputer", SimpleImputer(strategy="most_frequent")),
+    ("onehot", OneHotEncoder(handle_unknown="ignore", sparse_output=False)),
+])
+
+preprocess = ColumnTransformer(
+    transformers=[
+        ("num", numeric_transformer, numeric_cols),
+        ("bin", binary_transformer, binary_int_cols),
+        ("cat", categorical_transformer, cat_cols),
+    ],
+    remainder="drop",
+)
+
+
+clf = TabPFNClassifier(device="cpu")
+
+pipe = Pipeline([
+    ("prep", preprocess),
+    ("model", clf),
+])
+
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, stratify=y, random_state=42
+)
+
+pipe.fit(X_train, y_train)
+y_pred_default = pipe.predict(X_test)
+y_prob = pipe.predict_proba(X_test)[:, 1]  
+
+threshold = 0.3  
+y_pred_custom = (y_prob > threshold).astype(int)
+
+print("ROC-AUC:", roc_auc_score(y_test, y_prob))
+print(classification_report(y_test, y_pred_custom, digits=4))
+
+precision, recall, _ = precision_recall_curve(y_test, y_prob)
+
+pr_auc = auc(recall, precision)
+
+ap = average_precision_score(y_test, y_prob)
+
+print(f"PR AUC: {pr_auc:.4f}")
+print(f"Average Precision (AP): {ap:.4f}")
+print(f"Baseline (positive prevalence): {y_test.mean():.4f}")
