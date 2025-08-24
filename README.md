@@ -64,5 +64,10 @@ I predict using 11 different features:
 <img width="530" height="272" alt="image" src="https://github.com/user-attachments/assets/bd32a221-9962-4e5d-a37c-c9a0c61f5fa8" />
 
 ### pr_auc and auc_roc for non-TabPFN predictors:
+<img width="1288" height="112" alt="image" src="https://github.com/user-attachments/assets/5ab7e657-90a6-4674-a946-a3e162ecbdd8" />
+
+#### Thoughts:
+This dataset was pretty well curated and it didnt have a major class imbalance. I didn't have to do much fine-tuning. 
+
 
 
