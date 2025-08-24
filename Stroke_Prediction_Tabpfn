@@ -1,9 +1,7 @@
 import pandas as pd
 import torch
 import os
-
 os.environ["TABPFN_ALLOW_CPU_LARGE_DATASET"] = "1"
-
 from sklearn.metrics import precision_recall_curve, average_precision_score, auc
 from imblearn.over_sampling import SMOTE
 from sklearn.metrics import precision_recall_fscore_support
@@ -25,7 +23,6 @@ df = df.replace("N/A", np.nan)
 target_col = "stroke"
 y = df[target_col].astype(int)
 X = df.drop(columns=[target_col])
-
 
 numeric_cols = ["age", "avg_glucose_level", "bmi"]
 binary_int_cols = ["hypertension", "heart_disease"]     
@@ -123,7 +120,6 @@ print(f"\n→ Best threshold by F1 is {best_t:.2f} (F1={best_f1:.3f})")
 
 y_pred_auto = (probs > best_t).astype(int)
 print(f"\nFinal report at threshold = {best_t:.2f}:")
-
 
 print("Accuracy:", accuracy_score(y_test, y_pred_auto))
 print("ROC-AUC:", roc_auc_score(y_test, probs))
